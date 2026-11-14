@@ -6,6 +6,7 @@ manual-changelog:
   markup-type: markdown
 
 ignore:
+  - CLAUDE.md
   - CURSEFORGE.md
   - build.ps1
   - dist

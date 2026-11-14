@@ -1,0 +1,16 @@
+# BigWigs packager config, used by .github/workflows/release.yml
+package-as: RoadTo60
+
+manual-changelog:
+  filename: RoadTo60/CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - CURSEFORGE.md
+  - build.ps1
+  - dist
+  - screenshots
+
+# The addon lives in the RoadTo60/ subfolder of the repo; lift it to the zip root.
+move-folders:
+  RoadTo60/RoadTo60: RoadTo60

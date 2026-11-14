@@ -1,0 +1,23 @@
+# Packages the addon and uploads it to CurseForge whenever a version tag is pushed.
+# Push a tag like v1.0.1 (release), v1.1.0-beta1 (beta) or v1.1.0-alpha1 (alpha).
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # lets the packager attach the zip to a GitHub Release too
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # packager needs history/tags to build the version and changelog
+
+      - uses: BigWigsMods/packager@v2

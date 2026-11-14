@@ -9,7 +9,8 @@ local _, ns = ...
 
 local SHOWN_FROM = 55
 local RAIDS_OPEN = "20261209"   -- YYYYMMDD
-local AMULET = "Drakefire Amulet"
+-- Classic's item ID; the name (Locale.lua) is the fallback if Forever changed it
+local AMULET_ID = 16309
 
 local function hasAmulet()
     if not (C_Container and C_Container.GetContainerNumSlots) then return false end
@@ -17,8 +18,9 @@ local function hasAmulet()
     for bag = 0, (NUM_BAG_SLOTS or 4) do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID == AMULET_ID then return true end
             local name = info and info.hyperlink and getInfo(info.hyperlink)
-            if name == AMULET then return true end
+            if name == ns.L.drakefireAmulet then return true end
         end
     end
     return false

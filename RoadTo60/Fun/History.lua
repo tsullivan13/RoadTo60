@@ -79,7 +79,8 @@ function ns.GhostCompare(level, mine)
     for _, p in ipairs(ns.pillars) do
         local a = mine.grades and mine.grades[p.key] and mine.grades[p.key].score
         local b = cp.scores and cp.scores[p.key]
-        if a and b then
+        -- Pillars you turned off aren't something to be ahead or behind on
+        if a and b and not ns.settings.disabledPillars[p.key] then
             if a - b >= 10 then ahead[#ahead + 1] = pillarName(p.key)
             elseif b - a >= 10 then behind[#behind + 1] = pillarName(p.key) end
         end
@@ -131,15 +132,17 @@ end
 local SHORT = { gear = "Gear", spells = "Spells", professions = "Prof", gold = "Gold",
     quests = "Quests", dungeons = "Dungeons", legacy = "Legacy" }
 
-function ns.ShareText()
+-- `card` (optional): share that report card instead of today's grades
+function ns.ShareText(card)
     ns:Refresh()
-    local level = UnitLevel("player")
-    local cp = ns.char.checkpoints[level]
+    local level = card and card.level or UnitLevel("player")
+    local cp = card or ns.char.checkpoints[level]
     local src = cp and cp.grades or nil
     local parts = {}
     for _, p in ipairs(ns.pillars) do
         local g = src and src[p.key] or (ns.results[p.key] and ns.results[p.key].score and ns.results[p.key])
-        if g and g.grade then parts[#parts + 1] = (SHORT[p.key] or p.name) .. " " .. g.grade end
+        -- A checkpoint saved before a pillar was turned off still has its grade; leave it out
+        if g and g.grade and not ns.settings.disabledPillars[p.key] then parts[#parts + 1] = (SHORT[p.key] or p.name) .. " " .. g.grade end
     end
     local overall = ns.Grade(cp and cp.overall or ns.overall)
     local text = string.format("[Road to 60] Lv %d%s: %s (%s)", level, cp and " checkpoint" or "",
@@ -150,8 +153,8 @@ end
 
 local CHANNELS = { party = "PARTY", raid = "RAID", guild = "GUILD", say = "SAY", instance = "INSTANCE_CHAT" }
 
-function ns:Share(arg)
-    local text = ns.ShareText()
+function ns:Share(arg, card)
+    local text = ns.ShareText(card)
     local channel = CHANNELS[(arg or ""):lower()]
     if not channel then
         if IsInRaid and IsInRaid() then channel = "RAID"

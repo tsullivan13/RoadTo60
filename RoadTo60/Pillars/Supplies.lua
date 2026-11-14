@@ -38,16 +38,17 @@ function ns.ScanSupplies()
                 elseif classID == CONSUMABLE then
                     local spell = (itemSpellName(info.hyperlink) or ""):lower()
                     local lname = name:lower()
+                    local L = ns.L  -- words to look for (Locale.lua)
                     if subID == SUB_FOOD then
-                        if spell:find("drink") then c.drink = c.drink + n
-                        elseif spell:find("refreshment") then c.food = c.food + n; c.drink = c.drink + n
+                        if spell:find(L.drink, 1, true) then c.drink = c.drink + n
+                        elseif spell:find(L.refreshment, 1, true) then c.food = c.food + n; c.drink = c.drink + n
                         else c.food = c.food + n end
                     elseif subID == SUB_BANDAGE then
                         c.bandage = c.bandage + n
                     elseif subID == SUB_POTION then
-                        if lname:find("healing") then c.healPotion = c.healPotion + n
-                        elseif lname:find("mana") then c.manaPotion = c.manaPotion + n end
-                    elseif lname:find("poison") then
+                        if lname:find(L.healing, 1, true) then c.healPotion = c.healPotion + n
+                        elseif lname:find(L.mana, 1, true) then c.manaPotion = c.manaPotion + n end
+                    elseif lname:find(L.poison, 1, true) then
                         c.poison = c.poison + n
                     end
                 end

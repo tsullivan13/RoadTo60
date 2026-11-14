@@ -191,6 +191,23 @@ end
 card.prevBtn = navButton("<", "BOTTOMLEFT", 14)
 card.nextBtn = navButton(">", "BOTTOMRIGHT", -14)
 
+-- Share this card to your group or guild (settings: cardShare)
+card.shareBtn = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
+card.shareBtn:SetSize(60, 20)
+card.shareBtn:SetPoint("BOTTOMRIGHT", -48, 14)  -- left of the ">" button
+card.shareBtn:SetText("Share")
+card.shareBtn:SetScript("OnClick", function()
+    -- A preview is today's grades, so share those rather than calling it a checkpoint
+    ns:Safe("share", ns.Share, ns, nil, not card.isPreview and card.shown or nil)
+end)
+card.shareBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Post this card's grades in one line")
+    GameTooltip:AddLine("Raid, then party, then guild — whichever you're in.", 0.8, 0.8, 0.8, true)
+    GameTooltip:Show()
+end)
+card.shareBtn:SetScript("OnLeave", GameTooltip_Hide)
+
 local function savedLevels()
     local out = {}
     for _, l in ipairs(ns.CHECKPOINTS) do
@@ -213,7 +230,7 @@ card.nextBtn:SetScript("OnClick", function() step(1) end)
 local queuedCard
 function ns:ShowCard(c, preview)
     if InCombatLockdown() then queuedCard = c; return end
-    card.shown = c
+    card.shown, card.isPreview = c, preview and true or false
     card.title:SetText(preview and string.format("Level %d — preview", c.level)
         or string.format("Level %d Checkpoint", c.level))
     card.sub:SetText(string.format("%s · %s%s", UnitName("player"), date("%b %d", c.time),
@@ -255,6 +272,7 @@ function ns:ShowCard(c, preview)
     local levels = savedLevels()
     card.prevBtn:SetShown(not preview and #levels > 1)
     card.nextBtn:SetShown(not preview and #levels > 1)
+    card.shareBtn:SetShown(ns.settings.cardShare ~= false)
     card:Show()
 end
 

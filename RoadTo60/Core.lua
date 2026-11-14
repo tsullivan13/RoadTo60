@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 _G.RoadTo60 = ns
 
-ns.version = "1.0.0"
+ns.version = "1.1.0"
 
 ---------------------------------------------------------------------------
 -- Defaults (account-wide settings live in RoadTo60DB.settings)
@@ -15,6 +15,7 @@ ns.defaults = {
         spellOverdue   = 4,      -- trainable rank this many levels late = overdue (about one trainer trip)
         goldCurve      = 2.5,    -- expected savings = cost * (progress ^ goldCurve), progress from level 10
         disabledPillars = {},    -- [key] = true: left out of grading entirely
+        pillarWeights  = {},     -- [key] = percent of the pillar's built-in weight (nil = 100)
         nextStep       = true,   -- the "next best step" line under the pip bar
         -- Profession tier unlocks: [new cap] = { level, skill } needed to train it.
         -- Classic values; Forever's may differ.
@@ -28,7 +29,11 @@ ns.defaults = {
             trainable  = true,
             checkpoint = true,
             record     = true,
+            levelRecap = true,   -- one chat line at each ding: what changed during the level
         },
+        cardShare      = true,   -- "Share" button on report cards
+        minimap        = { shown = true, angle = 200 },   -- minimap button
+        dataBroker     = true,   -- feed Titan / ChocolateBar / other LibDataBroker displays
         -- Gold goals: { level, cost = copper, label, id }. Forever prices (Nov 2026):
         -- Apprentice riding 100g with a mount; Journeyman riding 1000g + epic mount 200g.
         -- Goals with a riding id get the 10% Honored discount.
@@ -36,7 +41,15 @@ ns.defaults = {
             { level = 40, cost = 100 * 10000,  label = "Apprentice riding + mount", id = "riding40" },
             { level = 60, cost = 1200 * 10000, label = "Journeyman riding + epic mount", id = "riding60" },
         },
-        pipBar = { point = "TOP", x = 0, y = -120, shown = true, locked = false },
+        -- orientation: "horizontal" | "vertical"
+        -- nextStepSide: where the next-step line sits, "below" | "above" | "left" | "right"
+        -- nextStepBox: draw it in a box like the bar's; nextStepWidth: widest it gets before wrapping
+        -- scale: percent; pipSize: pixels; letters: grade letter on each pip (colorblind help);
+        -- fade: dim the bar while every pillar is green, to fadeAlpha percent
+        pipBar = { point = "TOP", x = 0, y = -120, shown = true, locked = false,
+                   orientation = "horizontal", nextStepSide = "below",
+                   nextStepBox = true, nextStepWidth = 320,
+                   scale = 100, pipSize = 14, letters = false, fade = false, fadeAlpha = 35 },
     },
     learned = {},   -- learned spell tables per class (M2)
     runs    = {},   -- past runs for ghost comparison (M5)
@@ -231,14 +244,38 @@ function ns:GetPillar(key)
     end
 end
 
--- A pillar can hide itself until it matters (Legacy while locked, Raid below 55).
--- Hidden pillars get no pip, no dashboard row and no part in the overall grade.
+-- A pillar is hidden when the player turned it off in settings, or hides itself
+-- until it matters (Legacy while locked, Raid below 55).
+-- Hidden pillars get no pip, no dashboard row, no report-card line and no part in
+-- the overall grade.
 function ns.IsPillarShown(p)
+    if ns.settings and ns.settings.disabledPillars[p.key] then return false end
     if p.Hidden then
         local ok, hidden = pcall(p.Hidden, p)
         if ok and hidden then return false end
     end
     return true
+end
+
+-- A pillar's weight in the overall grade: built-in weight times the player's percent
+-- (Settings > Pillars). 0 keeps the pillar visible but out of the overall grade.
+function ns.PillarWeight(p)
+    if ns.settings.disabledPillars[p.key] then return 0 end
+    return (p.weight or 1) * (ns.settings.pillarWeights[p.key] or 100) / 100
+end
+
+-- Turn a pillar on or off (the same switch as the checkboxes in settings)
+function ns:SetPillarTracked(key, on)
+    local p = ns:GetPillar(key)
+    if not p then return end
+    ns.settings.disabledPillars[key] = (not on) or nil
+    if on then
+        ns:Print(p.name .. " is tracked again.")
+    else
+        ns:Print(p.name .. " is hidden. Bring it back with /r60 show " .. key .. " or in /r60 settings.")
+    end
+    if RoadTo60Settings and RoadTo60Settings:IsShown() then RoadTo60Settings.refresh() end
+    ns:Refresh()
 end
 
 -- Visible pillars in a fixed order of importance (each pillar's `order`), so every
@@ -268,7 +305,7 @@ function ns:Refresh()
     for _, p in ipairs(ns.pillars) do
         local ok, res
         if ns.settings.disabledPillars[p.key] then
-            ok, res = true, { reason = "Turned off in settings." }
+            ok, res = true, { reason = "Turned off in settings.", hidden = true }
         elseif not ns.IsPillarShown(p) then
             ok, res = true, { reason = "Not relevant yet.", hidden = true }
         else
@@ -284,8 +321,8 @@ function ns:Refresh()
         ns.results[p.key] = res
 
         if res.score then
-            total = total + res.score * p.weight
-            weights = weights + p.weight
+            total = total + res.score * ns.PillarWeight(p)
+            weights = weights + ns.PillarWeight(p)
         end
 
         -- status-change alerts

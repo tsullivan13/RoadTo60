@@ -1,10 +1,12 @@
 -- Road to 60: settings window (/r60 settings), also reachable from the game's
 -- Options > AddOns list. Built from basic button / check button / input box
 -- templates so it doesn't depend on slider templates that differ between clients.
+-- Three tabs: General (grading, gold goals, alerts), Pillars (track + weight),
+-- Display (pip bar, next step, minimap).
 local _, ns = ...
 
 local win = CreateFrame("Frame", "RoadTo60Settings", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-win:SetSize(560, 470)
+win:SetSize(560, 480)
 win:SetPoint("CENTER")
 win:SetFrameStrata("DIALOG")
 win:SetMovable(true)
@@ -30,15 +32,26 @@ title:SetText("Road to 60 — Settings")
 
 local controls = {}  -- each has :refresh()
 
-local function heading(text, x, y)
-    local h = win:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+---------------------------------------------------------------------------
+-- Control helpers (each takes the page it goes on)
+---------------------------------------------------------------------------
+local function heading(parent, text, x, y)
+    local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     h:SetPoint("TOPLEFT", x, y)
     h:SetText(text)
     return h
 end
 
-local function checkbox(label, x, y, get, set)
-    local cb = CreateFrame("CheckButton", nil, win, "UICheckButtonTemplate")
+local function note(parent, text, x, y, width)
+    local n = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    n:SetPoint("TOPLEFT", x, y)
+    if width then n:SetWidth(width); n:SetJustifyH("LEFT") end
+    n:SetText(text)
+    return n
+end
+
+local function checkbox(parent, label, x, y, get, set)
+    local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(24, 24)
     cb:SetPoint("TOPLEFT", x, y)
     local t = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -54,9 +67,9 @@ local function checkbox(label, x, y, get, set)
 end
 
 -- label  [-] value [+]
-local function stepper(label, x, y, min, max, step, get, set, fmt)
-    local f = CreateFrame("Frame", nil, win)
-    f:SetSize(250, 24)
+local function stepper(parent, label, x, y, min, max, step, get, set, fmt, width)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(width or 240, 24)
     f:SetPoint("TOPLEFT", x, y)
     local t = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("LEFT")
@@ -67,11 +80,15 @@ local function stepper(label, x, y, min, max, step, get, set, fmt)
     plus:SetText("+")
     local val = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     val:SetPoint("RIGHT", plus, "LEFT", -6, 0)
-    val:SetWidth(34)
+    val:SetWidth(40)
     local minus = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     minus:SetSize(22, 20)
     minus:SetPoint("RIGHT", val, "LEFT", -6, 0)
     minus:SetText("-")
+    -- The label stops before the buttons (cut short rather than running into them)
+    t:SetPoint("RIGHT", minus, "LEFT", -6, 0)
+    t:SetJustifyH("LEFT")
+    t:SetWordWrap(false)
     local function change(d)
         local v = math.max(min, math.min(max, (get() or min) + d))
         set(math.floor(v / step + 0.5) * step)
@@ -85,8 +102,35 @@ local function stepper(label, x, y, min, max, step, get, set, fmt)
     return f
 end
 
-local function input(x, y, width, get, set)
-    local e = CreateFrame("EditBox", nil, win, "InputBoxTemplate")
+-- label  [ value ]  — click the button to step through options = { {value, text}, ... }
+local function cycler(parent, label, x, y, options, get, set)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(240, 24)
+    f:SetPoint("TOPLEFT", x, y)
+    local t = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    t:SetPoint("LEFT")
+    t:SetText(label)
+    local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    b:SetSize(96, 20)
+    b:SetPoint("RIGHT")
+    t:SetPoint("RIGHT", b, "LEFT", -6, 0)
+    t:SetJustifyH("LEFT")
+    t:SetWordWrap(false)
+    local function index()
+        for i, o in ipairs(options) do if o[1] == get() then return i end end
+        return 1
+    end
+    b:SetScript("OnClick", function()
+        set(options[index() % #options + 1][1])
+        f.refresh()
+    end)
+    f.refresh = function() b:SetText(options[index()][2]) end
+    controls[#controls + 1] = f
+    return f
+end
+
+local function input(parent, x, y, width, get, set)
+    local e = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     e:SetSize(width, 20)
     e:SetPoint("TOPLEFT", x, y)
     e:SetAutoFocus(false)
@@ -104,108 +148,222 @@ local function input(x, y, width, get, set)
     return e
 end
 
-local S = function() return ns.settings end
-
----------------------------------------------------------------------------
--- Left column: grading
----------------------------------------------------------------------------
-local L, R = 22, 300
-heading("Grading", L, -52)
-stepper("Gear is stale after (levels)", L, -74, 3, 20, 1,
-    function() return S().staleLevels end, function(v) S().staleLevels = v end)
-stepper("Spell rank overdue after (levels)", L, -100, 0, 6, 1,
-    function() return S().spellOverdue end, function(v) S().spellOverdue = v end)
-stepper("Rings/neck/trinkets count from level", L, -126, 10, 60, 5,
-    function() return S().jewelryLevel end, function(v) S().jewelryLevel = v end)
--- (The gold curve stays a saved setting but isn't shown: its default is tuned.)
-
-heading("Pillars in your overall grade", L, -164)
-local PILLARS = { { "gear", "Gear" }, { "spells", "Spells" }, { "quests", "Quests" },
-    { "supplies", "Supplies" }, { "gold", "Gold" }, { "dungeons", "Dungeons" },
-    { "professions", "Professions" }, { "legacy", "Legacy" }, { "raid", "Raid ready" } }
-for i, p in ipairs(PILLARS) do
-    local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
-    checkbox(p[2], L + col * 125, -184 - row * 24,
-        function() return not S().disabledPillars[p[1]] end,
-        function(on) S().disabledPillars[p[1]] = (not on) or nil end)
+local function button(parent, text, x, y, width, onClick)
+    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetSize(width, 22)
+    b:SetPoint("TOPLEFT", x, y)
+    b:SetText(text)
+    b:SetScript("OnClick", onClick)
+    return b
 end
 
-heading("Gold goals", L, -320)
-local goalRows = {}
+local S = function() return ns.settings end
+local function bar() return ns.settings.pipBar end
+local function relayout() ns:ApplyPipBarPosition() end
+
+---------------------------------------------------------------------------
+-- Tabs
+---------------------------------------------------------------------------
+local pages, tabs = {}, {}
+local TOP = -84   -- where page content starts
+local L, R = 22, 300
+
+local function showPage(name)
+    for key, page in pairs(pages) do page:SetShown(key == name) end
+    for key, tab in pairs(tabs) do
+        -- The open tab stays lit
+        if key == name then tab:LockHighlight() else tab:UnlockHighlight() end
+    end
+    win.page = name
+end
+
+local function newPage(key, label, i)
+    local page = CreateFrame("Frame", nil, win)
+    page:SetAllPoints()
+    page:Hide()
+    pages[key] = page
+    local tab = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
+    tab:SetSize(100, 22)
+    tab:SetPoint("TOPLEFT", 20 + (i - 1) * 106, -46)
+    tab:SetText(label)
+    tab:SetScript("OnClick", function() showPage(key) end)
+    tabs[key] = tab
+    return page
+end
+
+---------------------------------------------------------------------------
+-- General: grading, gold goals, alerts
+---------------------------------------------------------------------------
+local general = newPage("general", "General", 1)
+
+heading(general, "Grading", L, TOP)
+-- Wider than the default so the labels fit beside the buttons
+local GW = 262
+stepper(general, "Gear is stale after (levels)", L, TOP - 22, 3, 20, 1,
+    function() return S().staleLevels end, function(v) S().staleLevels = v end, nil, GW)
+stepper(general, "Spell rank late after (levels)", L, TOP - 48, 0, 6, 1,
+    function() return S().spellOverdue end, function(v) S().spellOverdue = v end, nil, GW)
+stepper(general, "Rings, neck, trinkets from level", L, TOP - 74, 10, 60, 5,
+    function() return S().jewelryLevel end, function(v) S().jewelryLevel = v end, nil, GW)
+-- (The gold curve stays a saved setting but isn't shown: its default is tuned.)
+
+heading(general, "Gold goals", L, TOP - 116)
 for i = 1, 2 do
-    local y = -342 - (i - 1) * 26
-    local t = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local y = TOP - 138 - (i - 1) * 26
+    local t = general:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("TOPLEFT", L, y - 4)
     t:SetText("Level")
     local function goal() return S().goldGoals[i] end
-    input(L + 36, y, 30, function() return goal() and goal().level end, function(v)
+    input(general, L + 36, y, 30, function() return goal() and goal().level end, function(v)
         local n = tonumber(v)
         if n and n >= 1 and n <= 60 then
             if not goal() then S().goldGoals[i] = { level = n, cost = 0, label = "Level " .. n .. " goal" } end
             goal().level = n
         end
     end)
-    local g = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local g = general:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     g:SetPoint("TOPLEFT", L + 76, y - 4)
     g:SetText("gold")
     -- Shows the class-aware price; typing a different one makes it yours (custom)
-    input(L + 108, y, 50, function() return goal() and math.floor(ns.GoalBaseCost(goal()) / 10000) end, function(v)
+    input(general, L + 108, y, 50, function() return goal() and math.floor(ns.GoalBaseCost(goal()) / 10000) end, function(v)
         local n = tonumber(v)
         if n and n >= 0 and goal() and n * 10000 ~= ns.GoalBaseCost(goal()) then
             goal().cost, goal().custom = n * 10000, true
         end
     end)
-    input(L + 166, y, 100, function() return goal() and ns.GoalLabel(goal()) end, function(v)
+    input(general, L + 166, y, 100, function() return goal() and ns.GoalLabel(goal()) end, function(v)
         if goal() and v ~= "" and v ~= ns.GoalLabel(goal()) then
             goal().label, goal().customLabel = v, true
         end
     end)
-    goalRows[i] = true
 end
-local goalNote = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-goalNote:SetPoint("TOPLEFT", L, -398)
-goalNote:SetText("More goals: /r60 goal <level> <gold> <label>")
+note(general, "More goals: /r60 goal <level> <gold> <label>", L, TOP - 194)
 
----------------------------------------------------------------------------
--- Right column: alerts and display
----------------------------------------------------------------------------
-heading("Alerts", R, -52)
+heading(general, "Alerts", R, TOP)
 local ALERTS = {
     { "pillarRed", "A pillar turns red" },
-    { "trainable", "New ranks at your trainer" }, { "checkpoint", "Checkpoint report cards" },
+    { "trainable", "New ranks at your trainer" },
+    { "checkpoint", "Checkpoint report cards" },
     { "record", "New personal records" },
+    { "levelRecap", "Level-up recap in chat" },
 }
 for i, a in ipairs(ALERTS) do
-    checkbox(a[2], R, -72 - (i - 1) * 24,
+    checkbox(general, a[2], R, TOP - 20 - (i - 1) * 24,
         function() return S().alerts[a[1]] ~= false end,
         function(on) S().alerts[a[1]] = on end)
 end
 
-heading("Display", R, -206)
-checkbox("Show the pip bar", R, -226,
-    function() return S().pipBar.shown ~= false end,
-    function(on) S().pipBar.shown = on; ns:ApplyPipBarPosition(); ns:Safe("next step", ns.UpdateNextStep, ns) end)
-checkbox("Show the next best step under it", R, -250,
-    function() return S().nextStep ~= false end,
-    function(on) S().nextStep = on; ns:Safe("next step", ns.UpdateNextStep, ns) end)
-checkbox("Lock the pip bar in place", R, -274,
-    function() return S().pipBar.locked end,
-    function(on) S().pipBar.locked = on end)
-checkbox("Hide the dashboard in combat", R, -298,
+heading(general, "Windows", R, TOP - 150)
+checkbox(general, "Hide the dashboard in combat", R, TOP - 170,
     function() return S().hideInCombat end,
     function(on) S().hideInCombat = on end)
+checkbox(general, "Share button on report cards", R, TOP - 194,
+    function() return S().cardShare ~= false end,
+    function(on) S().cardShare = on end)
 
-local resetBar = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
-resetBar:SetSize(150, 22)
-resetBar:SetPoint("TOPLEFT", R, -330)
-resetBar:SetText("Reset pip bar position")
-resetBar:SetScript("OnClick", function()
-    local p = S().pipBar
+---------------------------------------------------------------------------
+-- Pillars: which to track, and how much each counts in the overall grade
+---------------------------------------------------------------------------
+local pillarsPage = newPage("pillars", "Pillars", 2)
+
+heading(pillarsPage, "Pillars to track", L, TOP)
+note(pillarsPage, "Unchecked pillars disappear from the bar, dashboard and report cards. "
+    .. "Weight is how much a pillar counts in your overall grade; 0% keeps it visible but ungraded. "
+    .. "Right-click a pip to hide it quickly.", L, TOP - 18, 500)
+
+local PILLARS = { { "gear", "Gear" }, { "spells", "Spells" }, { "quests", "Quests" },
+    { "supplies", "Supplies" }, { "gold", "Gold" }, { "dungeons", "Dungeons" },
+    { "professions", "Professions" }, { "legacy", "Legacy" }, { "raid", "Raid ready" } }
+local ROW0 = TOP - 60
+for i, p in ipairs(PILLARS) do
+    local y = ROW0 - (i - 1) * 26
+    checkbox(pillarsPage, p[2], L, y,
+        function() return not S().disabledPillars[p[1]] end,
+        function(on) S().disabledPillars[p[1]] = (not on) or nil end)
+    if p[1] == "raid" then
+        -- Raid ready reads the other pillars, so it never counts in the overall grade
+        note(pillarsPage, "a checklist of the others; not in the overall grade", L + 170, y - 6)
+    else
+        stepper(pillarsPage, "Weight", L + 170, y, 0, 200, 25,
+            function() return S().pillarWeights[p[1]] or 100 end,
+            function(v) S().pillarWeights[p[1]] = (v ~= 100) and v or nil end, "%d%%", 200)
+    end
+end
+button(pillarsPage, "Reset weights", L, ROW0 - #PILLARS * 26 - 8, 130, function()
+    wipe(S().pillarWeights)
+    win.refresh()
+    ns:Refresh()
+end)
+
+---------------------------------------------------------------------------
+-- Display: pip bar, next best step, minimap and broker
+---------------------------------------------------------------------------
+local display = newPage("display", "Display", 3)
+
+heading(display, "Pip bar", L, TOP)
+checkbox(display, "Show the pip bar", L, TOP - 20,
+    function() return bar().shown ~= false end,
+    function(on) bar().shown = on; relayout() end)
+checkbox(display, "Lock it in place", L, TOP - 44,
+    function() return bar().locked end,
+    function(on) bar().locked = on end)
+cycler(display, "Direction", L + 4, TOP - 72,
+    { { "horizontal", "Row" }, { "vertical", "Column" } },
+    function() return bar().orientation end,
+    function(v) bar().orientation = v; relayout() end)
+stepper(display, "Scale", L + 4, TOP - 98, 50, 200, 10,
+    function() return bar().scale or 100 end,
+    function(v) bar().scale = v; relayout() end, "%d%%")
+stepper(display, "Pip size", L + 4, TOP - 124, 10, 24, 2,
+    function() return bar().pipSize or 14 end,
+    function(v) bar().pipSize = v; relayout() end, "%dpx")
+checkbox(display, "Grade letter on each pip", L, TOP - 150,
+    function() return bar().letters end,
+    function(on) bar().letters = on; relayout() end)
+checkbox(display, "Fade while everything is green", L, TOP - 174,
+    function() return bar().fade end,
+    function(on) bar().fade = on; relayout() end)
+stepper(display, "Faded opacity", L + 4, TOP - 200, 10, 80, 5,
+    function() return bar().fadeAlpha or 35 end,
+    function(v) bar().fadeAlpha = v; relayout() end, "%d%%")
+button(display, "Reset pip bar position", L, TOP - 236, 160, function()
+    local p = bar()
     p.point, p.x, p.y, p.shown = "TOP", 0, -120, true
-    ns:ApplyPipBarPosition()
+    relayout()
     win.refresh()
 end)
 
+heading(display, "Next best step", R, TOP)
+checkbox(display, "Show the next best step", R, TOP - 20,
+    function() return S().nextStep ~= false end,
+    function(on) S().nextStep = on; ns:Safe("next step", ns.UpdateNextStep, ns) end)
+cycler(display, "Position", R + 4, TOP - 48,
+    { { "below", "Below" }, { "above", "Above" }, { "left", "Left" }, { "right", "Right" } },
+    function() return bar().nextStepSide end,
+    function(v) bar().nextStepSide = v; ns:Safe("next step", ns.UpdateNextStep, ns) end)
+
+checkbox(display, "In a box", R, TOP - 74,
+    function() return bar().nextStepBox ~= false end,
+    function(on) bar().nextStepBox = on; ns:Safe("next step", ns.UpdateNextStep, ns) end)
+stepper(display, "Wrap at width", R + 4, TOP - 100, 160, 640, 20,
+    function() return bar().nextStepWidth or 320 end,
+    function(v) bar().nextStepWidth = v; ns:Safe("next step", ns.UpdateNextStep, ns) end, "%dpx")
+
+heading(display, "Elsewhere", R, TOP - 142)
+checkbox(display, "Minimap button", R, TOP - 162,
+    function() return S().minimap.shown end,
+    function(on) S().minimap.shown = on; ns:ApplyMinimapButton() end)
+checkbox(display, "Titan / ChocolateBar feed", R, TOP - 186,
+    function() return S().dataBroker ~= false end,
+    function(on)
+        S().dataBroker = on
+        ns:Print("The broker feed change applies after /reload.")
+    end)
+note(display, "Needs a LibDataBroker display addon. Applies after /reload.", R + 4, TOP - 212, 230)
+
+---------------------------------------------------------------------------
+-- Always visible: reset everything, version
+---------------------------------------------------------------------------
 -- Reset everything: two clicks to confirm
 local resetAll = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
 resetAll:SetSize(170, 22)
@@ -222,6 +380,7 @@ resetAll:SetScript("OnClick", function(self)
     self:SetText("Reset all settings")
     ns:ResetSettings()
     ns:ApplyPipBarPosition()
+    ns:ApplyMinimapButton()
     win.refresh()
     ns:Refresh()
     ns:Print("Settings reset to defaults.")
@@ -239,6 +398,7 @@ win:SetScript("OnShow", function()
     -- Only one pop-up at a time: settings replaces an open report card
     if RoadTo60Card and RoadTo60Card:IsShown() then RoadTo60Card:Hide() end
     win:Raise()
+    showPage(win.page or "general")
     win.refresh()
 end)
 

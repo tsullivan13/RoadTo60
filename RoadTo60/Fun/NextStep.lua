@@ -131,7 +131,7 @@ end
 local function weight(key)
     local p = ns:GetPillar(key)
     if not p or ns.settings.disabledPillars[key] then return 0 end
-    return p.weight or 1
+    return ns.PillarWeight(p)
 end
 
 local function gradeShift(key, before, after)
@@ -264,17 +264,44 @@ function ns.NextStepCandidates()
 end
 
 ---------------------------------------------------------------------------
--- The line under the pip bar
+-- The next-step line beside the pip bar: optionally in a box like the bar's,
+-- wrapping at a width set in settings (pipBar.nextStepBox / nextStepWidth)
 ---------------------------------------------------------------------------
-local line = CreateFrame("Button", "RoadTo60NextStep", UIParent)
-line:SetSize(420, 18)
+local PAD_X, PAD_Y = 8, 5
+local line = CreateFrame("Button", "RoadTo60NextStep", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+line:SetSize(320, 18)
+line:SetClampedToScreen(true)  -- never pushed off the edge, whichever side it's set to
 line:Hide()
+if line.SetBackdrop then
+    line:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 10, insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+end
+
+local function applyBox(on)
+    if not line.SetBackdropColor then return end
+    line:SetBackdropColor(0, 0, 0, on and 0.7 or 0)
+    line:SetBackdropBorderColor(1, 1, 1, on and 1 or 0)
+end
+
+-- nextStepSide -> { line point, bar point, x, y }
+local SIDES = {
+    below = { "TOP", "BOTTOM", 0, -2 },
+    above = { "BOTTOM", "TOP", 0, 2 },
+    left  = { "RIGHT", "LEFT", -4, 0 },
+    right = { "LEFT", "RIGHT", 4, 0 },
+}
 line.text = line:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-line.text:SetPoint("CENTER")
+line.text:SetPoint("TOPLEFT", PAD_X, -PAD_Y)
+line.text:SetWordWrap(true)
 line.text:SetShadowOffset(1, -1)
 line:SetScript("OnClick", function() ns:ToggleDashboard() end)
 line:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+    self:SetAlpha(1)  -- undo the all-green fade while hovered
+    -- Open away from the bar
+    GameTooltip:SetOwner(self, ns.settings.pipBar.nextStepSide == "above" and "ANCHOR_TOP" or "ANCHOR_BOTTOM")
     GameTooltip:AddLine("Next best steps")
     for i, c in ipairs(self.candidates or {}) do
         if i > 4 then break end
@@ -284,7 +311,10 @@ line:SetScript("OnEnter", function(self)
     GameTooltip:AddLine("Click to open the dashboard.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end)
-line:SetScript("OnLeave", GameTooltip_Hide)
+line:SetScript("OnLeave", function()
+    GameTooltip_Hide()
+    if ns.ApplyPipBarFade then ns.ApplyPipBarFade() end
+end)
 
 local function describe(c)
     local tail = c.gain > 0 and ("  |cffaaaaaa(" .. gradeShift(c.pillar, c.before, c.after) .. ")|r") or ""
@@ -298,10 +328,22 @@ function ns:UpdateNextStep()
     local list = ns.NextStepCandidates()
     line.candidates = list
     if #list == 0 then line:Hide(); return end
+    -- Which side of the bar is a setting (pipBar.nextStepSide), not decided automatically
+    local a = SIDES[ns.settings.pipBar.nextStepSide] or SIDES.below
+    line:SetScale(bar:GetScale())  -- same size setting as the bar
     line:ClearAllPoints()
-    line:SetPoint("TOP", bar, "BOTTOM", 0, -2)
-    line.text:SetText(describe(list[1]))
-    line:SetWidth(math.max(200, (line.text:GetStringWidth() or 300) + 20))
+    line:SetPoint(a[1], bar, a[2], a[3], a[4])
+    -- Size: as wide as the text needs, up to the width setting, then wrap and grow taller
+    local o = ns.settings.pipBar
+    applyBox(o.nextStepBox ~= false)
+    local maxText = (o.nextStepWidth or 320) - PAD_X * 2
+    local t = line.text
+    t:SetWidth(0)  -- measure unwrapped first
+    t:SetText(describe(list[1]))
+    local textW = math.min(maxText, math.ceil(t:GetStringWidth() or maxText) + 2)
+    t:SetWidth(textW)
+    t:SetJustifyH((o.nextStepSide == "left" or o.nextStepSide == "right") and "LEFT" or "CENTER")
+    line:SetSize(textW + PAD_X * 2, math.ceil(t:GetStringHeight() or 12) + PAD_Y * 2)
     line:Show()
 end
 

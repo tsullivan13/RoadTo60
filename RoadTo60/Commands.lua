@@ -20,7 +20,9 @@ commands.help = function()
     print("  /r60 next — every next-step option, ranked (\"here\" = doable where you stand)")
     print("  /r60 goals, /r60 goal <level> <gold> [label], /r60 delgoal <level> — gold goals")
     print("  /r60 share [party|raid|guild|say] — post your grades in one line")
-    print("  /r60 bar [show|hide|reset] — the compact pip bar")
+    print("  /r60 bar [show|hide|reset|row|column] — the compact pip bar")
+    print("  /r60 bar next <below|above|left|right> — where the next best step sits")
+    print("  /r60 hide <pillar>, /r60 show <pillar> — stop or start tracking a pillar")
     print("  /r60 mute <pillarRed|trainable|checkpoint|record> — toggle an alert type")
     print("  /r60 debug — tools for troubleshooting")
 end
@@ -242,14 +244,52 @@ end
 
 commands.bar = function(args)
     local pos = ns.settings.pipBar
+    args = (args or ""):lower()
+    local side = args:match("^next%s+(%a+)$")
     if args == "hide" then
         pos.shown = false
+    elseif args == "row" or args == "horizontal" then
+        pos.orientation = "horizontal"
+    elseif args == "column" or args == "vertical" then
+        pos.orientation = "vertical"
+    elseif side then
+        if not (side == "below" or side == "above" or side == "left" or side == "right") then
+            return ns:Print("usage: /r60 bar next <below|above|left|right>")
+        end
+        pos.nextStepSide = side
     elseif args == "reset" then
         pos.point, pos.x, pos.y, pos.shown = "TOP", 0, -120, true
     else
         pos.shown = true
     end
     ns:ApplyPipBarPosition()
+end
+
+-- "gear", "Raid", "raid ready", "prof" -> the pillar (key or the start of its name)
+local function findPillar(arg)
+    arg = (arg or ""):lower()
+    if arg == "" then return nil end
+    for _, p in ipairs(ns.pillars) do
+        if p.key == arg or p.name:lower():sub(1, #arg) == arg then return p end
+    end
+end
+
+local function pillarNames()
+    local keys = {}
+    for _, p in ipairs(ns.pillars) do keys[#keys + 1] = p.key end
+    return table.concat(keys, ", ")
+end
+
+commands.hide = function(args)
+    local p = findPillar(args)
+    if not p then return ns:Print("usage: /r60 hide <pillar> — " .. pillarNames()) end
+    ns:SetPillarTracked(p.key, false)
+end
+
+commands.show = function(args)
+    local p = findPillar(args)
+    if not p then return ns:Print("usage: /r60 show <pillar> — " .. pillarNames()) end
+    ns:SetPillarTracked(p.key, true)
 end
 
 commands.mute = function(args)

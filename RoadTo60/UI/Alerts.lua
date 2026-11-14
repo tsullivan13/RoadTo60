@@ -46,5 +46,41 @@ end
 
 ns:On("PLAYER_REGEN_ENABLED", function() showNext() end)
 
--- (No level-up summary: the next-best-step line under the pip bar already says
--- what to do, and trainer ranks and checkpoints have their own alerts.)
+---------------------------------------------------------------------------
+-- Level-up recap (alerts.levelRecap): one chat line at each ding saying what
+-- changed during the level you just finished. "Level 33 done: Gear B to A,
+-- Spells C to B · +62g". Chat only, no toast.
+---------------------------------------------------------------------------
+local function snapshot(level)
+    local grades = {}
+    for _, p in ipairs(ns.PillarsInOrder()) do
+        local r = ns.results[p.key]
+        if r and r.score then grades[p.key] = r.score end
+    end
+    ns.char.levelSnapshot = { level = level, money = GetMoney(), grades = grades }
+end
+
+-- Runs before the post-ding refresh, so ns.results still holds the end of the old level
+ns:Listen("LEVEL_UP", function(newLevel)
+    local snap = ns.char.levelSnapshot
+    if ns.settings.alerts.levelRecap == false or not snap or snap.level ~= newLevel - 1 then return end
+    local parts = {}
+    for _, p in ipairs(ns.PillarsInOrder()) do
+        local r, before = ns.results[p.key], snap.grades[p.key]
+        if r and r.score and before and ns.Grade(before) ~= r.grade then
+            parts[#parts + 1] = string.format("%s %s to %s", p.name, ns.Grade(before), r.grade)
+        end
+    end
+    local money = GetMoney() - (snap.money or GetMoney())
+    local text = string.format("Level %d done: %s", snap.level,
+        #parts > 0 and table.concat(parts, ", ") or "grades held steady")
+    if money ~= 0 then text = text .. " · " .. (money > 0 and "+" or "") .. ns.FormatMoney(money) end
+    ns:Print(text)
+end)
+
+-- A fresh snapshot at the start of each level (and the first time we see a character)
+ns:Listen("PILLARS_UPDATED", function()
+    local level = UnitLevel("player")
+    local snap = ns.char.levelSnapshot
+    if not snap or snap.level ~= level then snapshot(level) end
+end)

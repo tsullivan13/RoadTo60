@@ -2,13 +2,14 @@
 ## Title: Road to 60
 ## Notes: Shows at any level whether your gear, spells, quests, supplies, gold, dungeons and professions are ready for the road to 60, and what to fix next.
 ## Author: theordinarycoconut
-## Version: 1.0.0
+## Version: 1.1.0
 ## IconTexture: Interface\Icons\Ability_Rogue_Sprint
 ## X-Curse-Project-ID: 1800957
 ## OptionalDeps: LevelUpInfo, ForeverDungeonJournal
 ## SavedVariables: RoadTo60DB
 ## SavedVariablesPerCharacter: RoadTo60CharDB
 
+Locale.lua
 Core.lua
 Probe.lua
 Pillars\Gear.lua
@@ -27,6 +28,7 @@ Fun\NextStep.lua
 Fun\History.lua
 UI\Alerts.lua
 UI\PipBar.lua
+UI\Minimap.lua
 UI\Dashboard.lua
 UI\Settings.lua
 Commands.lua

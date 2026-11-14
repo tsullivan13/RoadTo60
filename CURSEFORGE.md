@@ -2,8 +2,8 @@
 
 **Name:** Road to 60
 **Game version:** WoW Forever (Interface 16001)
-**Version / release type:** 1.0.0 · Release
-**Changelog for the file:** the 1.0.0 section of `RoadTo60/CHANGELOG.md`
+**Version / release type:** 1.1.0 · Release
+**Changelog for the file:** the 1.1.0 section of `RoadTo60/CHANGELOG.md`
 **Category suggestion:** Quests & Leveling
 **Optional dependencies to link:** LevelUpInfo, ForeverDungeonJournal
 **Summary (one line):** At any level, see whether you're prepared for the road to 60, and what to fix next.
@@ -39,11 +39,13 @@ A row of colored pips sits at the top of your screen, one per pillar, in order o
 Forever reworked the classes and most quests, so Road to 60 doesn't ship a fixed database. It learns your class's spells from your trainer visits, shares them with your other characters of that class, and remembers where trainers stand. If you have **LevelUpInfo** or **ForeverDungeonJournal** installed, it reads their data too: trainer spell lists, dungeon levels and dungeon quests.
 
 ### Stays out of your way
-Nothing shows during combat, and alerts wait until you're out of it. Every alert can be muted, every threshold tuned in `/r60 settings`, and any pillar you don't care about left out.
+Nothing shows during combat, and alerts wait until you're out of it. Every alert can be muted, every threshold tuned in `/r60 settings`, and any pillar you don't care about hidden (right-click its pip) or weighted down.
+
+Lay the pip bar out as a row or a column, put the next step on any side, scale it, add grade letters to the pips, or let it fade while everything is green. Prefer it elsewhere? Turn on the minimap button, or show your grade in Titan Panel, ChocolateBar or another LibDataBroker display.
 
 ### Good to know
 - Made for the English client. Some checks read item and quest text (food vs. drink, healing potions, the Drakefire Amulet), so other languages may miss them.
 - If something looks wrong, `/r60 debug` has tools that save what Road to 60 sees, which makes a bug report easy to act on.
 
 ### Commands
-`/r60` opens the dashboard · `/r60 settings` · `/r60 progress` · `/r60 card` · `/r60 next` · `/r60 share` · `/r60 help`
+`/r60` opens the dashboard · `/r60 settings` · `/r60 progress` · `/r60 card` · `/r60 next` · `/r60 share` · `/r60 hide <pillar>` · `/r60 show <pillar>` · `/r60 bar row|column` · `/r60 bar next <side>` · `/r60 help`

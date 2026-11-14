@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.1.0
+Polish round: everything new can be switched off in `/r60 settings`, which now has
+General, Pillars and Display tabs.
+
+**Pillars**
+- Turning a pillar off now hides it completely: no pip, no dashboard row, no report-card
+  line, and it's left out of `/r60 share` and ghost-run comparisons. (Before, it only left
+  the overall grade and kept a gray pip.)
+- Right-click a pip to hide that pillar, or use `/r60 hide <pillar>` / `/r60 show <pillar>`.
+- Pillar weights: set how much each pillar counts in your overall grade, from 0% to 200%.
+
+**Pip bar**
+- Lay it out as a row or a column (`/r60 bar row|column`).
+- Choose where the next best step sits: below, above, left or right of the bar
+  (`/r60 bar next <side>`). It stays on screen wherever the bar is.
+- The next best step sits in a box like the bar's (optional) and wraps at a width you set.
+- The overall grade at the end of the bar is colored green, yellow or red like the pips.
+- Scale and pip size settings.
+- Optional grade letter on each pip, for players who find the colors hard to tell apart.
+- Optional fade while every pillar is green; it comes back when anything slips or you hover.
+- Pip tooltips open on the side away from the next-step line.
+
+**Elsewhere**
+- Minimap button: click for the dashboard, right-click for settings.
+- Titan Panel / ChocolateBar / other LibDataBroker displays can show your overall grade.
+- Level-up recap: one chat line at each ding with the grades that changed and gold gained.
+- Share button on report cards.
+- Words the addon reads in item text (food vs. drink, potions, poisons, the Drakefire Amulet)
+  now live in `Locale.lua`, ready for translations. The Drakefire Amulet is also matched by
+  item ID.
+
 ## 1.0.0
 First release.
 - Pip bar with a grade for each pillar: Gear, Spells, Quests, Supplies, Gold, Dungeons,

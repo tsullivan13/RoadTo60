@@ -2,8 +2,8 @@
 
 **Name:** Road to 60
 **Game version:** WoW Forever (Interface 16001)
-**Version / release type:** 1.1.0 · Release
-**Changelog for the file:** the 1.1.0 section of `RoadTo60/CHANGELOG.md`
+**Version / release type:** 1.2.0 · Release
+**Changelog for the file:** the 1.2.0 section of `RoadTo60/CHANGELOG.md`
 **Category suggestion:** Quests & Leveling
 **Optional dependencies to link:** LevelUpInfo, ForeverDungeonJournal
 **Summary (one line):** At any level, see whether you're prepared for the road to 60, and what to fix next.
@@ -18,10 +18,11 @@ A row of colored pips sits at the top of your screen, one per pillar, in order o
 
 ### The pillars
 - **Raid ready** (from level 55): a checklist for Forever's first raids (Barrow Deeps, Hyjal Summit and Onyxia's Lair): gear, spells and talents, supplies, and the Drakefire Amulet for Onyxia's attunement.
-- **Gear**: slots that have fallen behind your level, empty slots, and small or missing bags. Weapons count most, and better quality lasts longer. *"Your boots are 12 levels old."*
+- **Gear**: slots that have fallen behind your level, empty slots, and small or missing bags. Weapons count most, and better quality lasts longer. Priests, Mages and Warlocks get their wand graded like a weapon. *"Your boots are 12 levels old."*
 - **Spells**: ranks waiting at your trainer, unspent talent points, and weapon skills you could learn. *"Train 3 ranks — 1g 40s. You can afford it."*
 - **Quests**: finished quests waiting to be turned in, gray quests, and enough quests at your level to work on.
 - **Supplies**: food, water, healing potions, bandages, class supplies (Hunter ammo, Warlock soul shards, Rogue poisons), repairs, and a hearthstone still set in a zone you've left. *"Buy food."*
+- **Pet** (Hunters, from level 10): your pet's level against yours, its happiness, and unspent training points. *"Your pet is 4 levels behind."*
 - **Gold**: savings toward your riding goals, using Forever's prices (Paladin class mounts included) and your Honored discount.
 - **Dungeons**: dungeons in your level range, the quest XP you'd leave behind, and quests to pick up in town before you go in. *"Before Ragefire Chasm: pick up Hidden Enemies (Thrall, Orgrimmar)."*
 - **Professions**: skill for your level, tiers you can train, and a suggested second profession that pairs with your first.

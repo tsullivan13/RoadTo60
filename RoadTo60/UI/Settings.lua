@@ -6,7 +6,7 @@
 local _, ns = ...
 
 local win = CreateFrame("Frame", "RoadTo60Settings", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-win:SetSize(560, 480)
+win:SetSize(560, 506)
 win:SetPoint("CENTER")
 win:SetFrameStrata("DIALOG")
 win:SetMovable(true)
@@ -205,11 +205,14 @@ stepper(general, "Spell rank late after (levels)", L, TOP - 48, 0, 6, 1,
     function() return S().spellOverdue end, function(v) S().spellOverdue = v end, nil, GW)
 stepper(general, "Rings, neck, trinkets from level", L, TOP - 74, 10, 60, 5,
     function() return S().jewelryLevel end, function(v) S().jewelryLevel = v end, nil, GW)
+stepper(general, "Head, shoulders from level", L, TOP - 100, 10, 60, 1,
+    function() return S().headLevel end, function(v) S().headLevel = v end, nil, GW)
+note(general, "Empty slots phase in over 5 levels from there.", L + 4, TOP - 126, 260)
 -- (The gold curve stays a saved setting but isn't shown: its default is tuned.)
 
-heading(general, "Gold goals", L, TOP - 116)
+heading(general, "Gold goals", L, TOP - 152)
 for i = 1, 2 do
-    local y = TOP - 138 - (i - 1) * 26
+    local y = TOP - 174 - (i - 1) * 26
     local t = general:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("TOPLEFT", L, y - 4)
     t:SetText("Level")
@@ -237,7 +240,7 @@ for i = 1, 2 do
         end
     end)
 end
-note(general, "More goals: /r60 goal <level> <gold> <label>", L, TOP - 194)
+note(general, "More goals: /r60 goal <level> <gold> <label>", L, TOP - 230)
 
 heading(general, "Alerts", R, TOP)
 local ALERTS = {
@@ -261,6 +264,15 @@ checkbox(general, "Share button on report cards", R, TOP - 194,
     function() return S().cardShare ~= false end,
     function(on) S().cardShare = on end)
 
+heading(general, "Class checks", R, TOP - 228)
+checkbox(general, "Mages: conjure food and water", R, TOP - 248,
+    function() return S().classChecks.conjure ~= false end,
+    function(on) S().classChecks.conjure = on end)
+checkbox(general, "Priest, Mage, Warlock: grade the wand", R, TOP - 272,
+    function() return S().classChecks.wand ~= false end,
+    function(on) S().classChecks.wand = on end)
+note(general, "The Hunter pet check is a pillar: see the Pillars tab.", R + 4, TOP - 298, 230)
+
 ---------------------------------------------------------------------------
 -- Pillars: which to track, and how much each counts in the overall grade
 ---------------------------------------------------------------------------
@@ -272,7 +284,7 @@ note(pillarsPage, "Unchecked pillars disappear from the bar, dashboard and repor
     .. "Right-click a pip to hide it quickly.", L, TOP - 18, 500)
 
 local PILLARS = { { "gear", "Gear" }, { "spells", "Spells" }, { "quests", "Quests" },
-    { "supplies", "Supplies" }, { "gold", "Gold" }, { "dungeons", "Dungeons" },
+    { "supplies", "Supplies" }, { "pet", "Pet (Hunters)" }, { "gold", "Gold" }, { "dungeons", "Dungeons" },
     { "professions", "Professions" }, { "legacy", "Legacy" }, { "raid", "Raid ready" } }
 local ROW0 = TOP - 60
 for i, p in ipairs(PILLARS) do

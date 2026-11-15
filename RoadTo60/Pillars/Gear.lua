@@ -4,9 +4,10 @@ local _, ns = ...
 -- core = counts when empty, from level `from` (head/shoulder drops are rare early);
 -- jewelry = only after settings.jewelryLevel
 ns.GEAR_SLOTS = {
-    { id = 1,  name = "Head",      core = true, from = 20 },
+    -- late = from settings.headLevel: helmets and shoulders rarely drop until the mid 20s
+    { id = 1,  name = "Head",      core = true, late = true },
     { id = 2,  name = "Neck",      jewelry = true },
-    { id = 3,  name = "Shoulders", core = true, from = 20 },
+    { id = 3,  name = "Shoulders", core = true, late = true },
     { id = 15, name = "Back",      core = true, from = 12 },
     { id = 5,  name = "Chest",     core = true, from = 5 },
     { id = 9,  name = "Wrists",    core = true, from = 15 },
@@ -113,12 +114,30 @@ local QUALITY_LEVELS = { [0] = -3, [1] = 0, [2] = 3, [3] = 6, [4] = 9 }
 -- The grade loses (sum of impact x missing points) / SPREAD. One badly stale chest
 -- costs ~15 (a B), a stale weapon ~30 (a C), half your gear stale is an F.
 local SPREAD = 4.5
+-- An empty slot phases in over this many levels from the level it starts counting
+-- (20% a level), so reaching that level is a nudge, not a sudden drop
+local EMPTY_RAMP = 5
+
+-- Priests, Mages and Warlocks lean on a wand while leveling: their ranged slot is
+-- graded nearly like a weapon (settings: classChecks.wand) and counts from WAND_FROM
+local WAND_CLASSES = { PRIEST = true, MAGE = true, WARLOCK = true }
+local WAND_FROM = 12
+local function usesWand(class)
+    return WAND_CLASSES[class] and ns.settings.classChecks.wand ~= false
+end
 
 local function impact(s, class)
     if class == "HUNTER" then
         if s.name == "Ranged" then return 2 elseif s.name == "Main hand" then return 0.6 end
     end
+    if s.name == "Ranged" and usesWand(class) then return 1.5 end
     return IMPACT[s.name] or 0.5
+end
+
+-- What to call a slot in text: a caster's ranged slot is their wand
+local function slotLabel(s, class)
+    if s.name == "Ranged" and usesWand(class) then return "Wand" end
+    return s.name
 end
 
 -- 100 while within half the stale threshold, 75 at the threshold, then -6 a level
@@ -140,15 +159,24 @@ function Gear:Evaluate()
     for _, s in ipairs(ns.GEAR_SLOTS) do
         local info = ns.ReadSlot(s.id)
         local w = impact(s, class)
+        local label = slotLabel(s, class)
         if not info then
-            local from = s.core and (s.from or 1) or (s.jewelry and ns.settings.jewelryLevel) or nil
+            local from = s.core and (s.late and ns.settings.headLevel or s.from or 1)
+                or (s.jewelry and ns.settings.jewelryLevel) or nil
             if class == "HUNTER" and s.name == "Ranged" then from = 1 end
+            if s.name == "Ranged" and usesWand(class) then from = WAND_FROM end
             if from and level >= from then
-                missing = missing + w * 100
-                breakdown[#breakdown + 1] = { label = s.name, score = 0, note = "Empty" }
-                issues[#issues + 1] = { slot = s.name, empty = true, cost = w * 100, penalty = w * 100 / SPREAD }
+                -- Phase in: 20% at the starting level, full weight EMPTY_RAMP levels later.
+                -- Slots that count from level 1 (chest, legs, a Hunter's ranged...) start full.
+                local share = from <= 1 and 1 or math.min(1, (level - from + 1) / EMPTY_RAMP)
+                local cost = w * 100 * share
+                missing = missing + cost
+                breakdown[#breakdown + 1] = { label = label, score = math.floor(100 * (1 - share) + 0.5),
+                    note = share < 1 and string.format("Empty (counts fully from level %d)", from + EMPTY_RAMP - 1)
+                        or "Empty" }
+                issues[#issues + 1] = { slot = label, empty = true, cost = cost, penalty = cost / SPREAD }
             else
-                breakdown[#breakdown + 1] = { label = s.name, note = from
+                breakdown[#breakdown + 1] = { label = label, note = from
                     and string.format("Empty (counts from level %d)", from) or "Empty (optional)" }
             end
         elseif info.pending then
@@ -158,12 +186,12 @@ function Gear:Evaluate()
             local sc = slotScore(age, threshold)
             missing = missing + w * (100 - sc)
             local realAge = level - info.effective
-            breakdown[#breakdown + 1] = { label = s.name, score = math.floor(sc + 0.5),
+            breakdown[#breakdown + 1] = { label = label, score = math.floor(sc + 0.5),
                 note = string.format("%s — %s", info.link,
                     realAge <= 0 and "current" or (realAge .. " level" .. (realAge == 1 and "" or "s") .. " old")) }
             if age > threshold then
                 staleCount = staleCount + 1
-                issues[#issues + 1] = { slot = s.name, age = realAge, link = info.link,
+                issues[#issues + 1] = { slot = label, age = realAge, link = info.link,
                     cost = w * (100 - sc), penalty = w * (100 - sc) / SPREAD }
             end
         end
@@ -187,7 +215,8 @@ function Gear:Evaluate()
     else
         local worst = issues[1]
         if worst.empty then
-            res.action = string.format("Fill your empty %s slot.", worst.slot:lower())
+            res.action = worst.slot == "Wand" and "Get a wand (quests, the auction house, or an enchanter)."
+                or string.format("Fill your empty %s slot.", worst.slot:lower())
         else
             -- "Your feet are", "Your chest is"
             local plural = ({ Shoulders = true, Wrists = true, Hands = true, Legs = true, Feet = true })[worst.slot]

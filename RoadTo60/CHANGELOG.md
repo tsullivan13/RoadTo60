@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0
+Class checks. Each can be switched off: the Pet pillar in Settings > Pillars, the others
+under Settings > General > Class checks.
+
+- **Hunter pet pillar** (from level 10): your pet's level against yours, its happiness, and
+  unspent training points. A dismissed or stabled pet still counts at the level you last
+  saw it. No pet by level 12 suggests the taming quest.
+- **Wands for Priests, Mages and Warlocks:** the ranged slot is now graded as "Wand", nearly
+  as heavily as a weapon, and an empty one counts from level 12.
+- **Mages conjure their food and water:** Supplies now says "Conjure water" instead of
+  sending you to a vendor.
+- **Fairer empty-slot grading:** empty head and shoulder slots now count from level 25
+  (was 20; helmets rarely drop sooner), set under Settings > General. Every empty slot that
+  starts counting at a level phases in over 5 levels instead of hitting all at once, so
+  reaching 20 no longer drops Gear from an A to a D overnight.
+- Report cards have room for all ten pillars.
+
 ## 1.1.0
 Polish round: everything new can be switched off in `/r60 settings`, which now has
 General, Pillars and Display tabs.

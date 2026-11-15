@@ -216,7 +216,7 @@ function ns.NextStepCandidates()
     if g and g.score and g.issues and g.issues[1] then
         local i = g.issues[1]
         add({ pillar = "gear", before = g.score, after = math.min(100, g.score + (i.penalty or 0)),
-            text = i.empty and string.format("Find a %s item", i.slot:lower())
+            text = i.empty and (i.slot == "Wand" and "Get a wand" or string.format("Find a %s item", i.slot:lower()))
                 or string.format("Upgrade your %s (%d levels old)", i.slot:lower(), i.age) })
     end
 
@@ -225,6 +225,13 @@ function ns.NextStepCandidates()
     if sup and sup.score and sup.action then
         add({ pillar = "supplies", here = IsResting and IsResting() or false,
             before = sup.score, after = 100, bonus = 2, text = (sup.action:gsub("%.$", "")) })
+    end
+
+    -- Hunter pet: feeding works anywhere ("here"); leveling or training it doesn't
+    local pet = ns.results.pet
+    if pet and pet.score and pet.action then
+        add({ pillar = "pet", here = pet.actionHere or false,
+            before = pet.score, after = 100, bonus = 1, text = (pet.action:gsub("%.$", "")) })
     end
 
     -- Dungeon prep: quests to pick up in town before going in

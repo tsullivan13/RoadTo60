@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 _G.RoadTo60 = ns
 
-ns.version = "1.1.0"
+ns.version = "1.2.0"
 
 ---------------------------------------------------------------------------
 -- Defaults (account-wide settings live in RoadTo60DB.settings)
@@ -11,6 +11,7 @@ ns.defaults = {
     settings = {
         staleLevels    = 8,      -- gear slot older than this many levels = stale
         jewelryLevel   = 25,     -- empty neck/ring/trinket only counts after this level
+        headLevel      = 25,     -- empty head/shoulders only count after this level
         hideInCombat   = true,   -- hide the dashboard while in combat
         spellOverdue   = 4,      -- trainable rank this many levels late = overdue (about one trainer trip)
         goldCurve      = 2.5,    -- expected savings = cost * (progress ^ goldCurve), progress from level 10
@@ -34,6 +35,10 @@ ns.defaults = {
         cardShare      = true,   -- "Share" button on report cards
         minimap        = { shown = true, angle = 200 },   -- minimap button
         dataBroker     = true,   -- feed Titan / ChocolateBar / other LibDataBroker displays
+        -- Class checks: conjure = Mages are told to conjure food/water, not buy it;
+        -- wand = Priests, Mages and Warlocks get their wand graded like a weapon.
+        -- (The Hunter pet check is its own pillar, switched in Settings > Pillars.)
+        classChecks    = { conjure = true, wand = true },
         -- Gold goals: { level, cost = copper, label, id }. Forever prices (Nov 2026):
         -- Apprentice riding 100g with a mount; Journeyman riding 1000g + epic mount 200g.
         -- Goals with a riding id get the 10% Honored discount.

@@ -161,7 +161,7 @@ card.grade:SetPoint("TOPRIGHT", -44, -18)
 card.grade:SetFont(card.grade:GetFont(), 36, "OUTLINE")
 
 card.lines = {}
-for i = 1, 9 do
+for i = 1, 10 do  -- one line per pillar (a level 55+ Hunter can show all 10)
     local g = card:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     g:SetPoint("TOPLEFT", 22, -70 - (i - 1) * 30)
     g:SetWidth(24)

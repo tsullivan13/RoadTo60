@@ -125,9 +125,13 @@ function Supplies:Evaluate()
     end
 
     if level >= 5 then
-        row("Food", s.food, 10, 20, s.food == 0 and "Buy food." or string.format("Stock up on food (you have %d).", s.food))
+        -- Mages conjure their own (conjured items count like any food or drink)
+        local conjure = class == "MAGE" and ns.settings.classChecks.conjure ~= false
+        local get = conjure and "Conjure" or "Buy"
+        local stock = conjure and "Conjure more" or "Stock up on"
+        row("Food", s.food, 10, 20, s.food == 0 and (get .. " food.") or string.format("%s food (you have %d).", stock, s.food))
         if UnitPowerType and UnitPowerType("player") == 0 then
-            row("Drink", s.drink, 10, 20, s.drink == 0 and "Buy water." or string.format("Stock up on water (you have %d).", s.drink))
+            row("Drink", s.drink, 10, 20, s.drink == 0 and (get .. " water.") or string.format("%s water (you have %d).", stock, s.drink))
         end
     end
     if level >= 10 then
